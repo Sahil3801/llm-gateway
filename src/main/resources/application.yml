@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: llm-gateway
+  threads:
+    # Java 21 virtual threads: each request (and each blocking provider call) runs on a cheap
+    # virtual thread, so slow LLM calls don't exhaust Tomcat's thread pool.
+    virtual:
+      enabled: true
+
+server:
+  port: ${PORT:8080}
+  # Finish in-flight requests before the container stops.
+  shutdown: graceful
+  error:
+    # Never leak stack traces or exception messages in default error responses.
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# Gateway-specific settings (providers, fallback, cache, rate limit) are added step by step.

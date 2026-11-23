@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Inheriting from the Spring Boot parent gives us:
+        - a curated, compatible set of dependency versions (no version numbers needed below)
+        - sensible plugin defaults (compiler, resources, the Boot repackage plugin)
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.16</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.github.sahil3801</groupId>
+    <artifactId>llm-gateway</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>llm-gateway</name>
+    <description>One REST API in front of multiple LLM providers, with fallback, caching and rate limiting.</description>
+
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+
+    <dependencies>
+        <!-- Spring MVC + embedded Tomcat + Jackson: serves POST /v1/chat and gives us RestClient
+             for calling the providers. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Bean Validation (@NotBlank, @Size ...) so bad requests are rejected before any provider call. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- /actuator/health: used by the Docker HEALTHCHECK and by any hosting platform. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Redis support is added in step 4 (caching), when it is first needed. -->
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Packages everything into one executable jar: java -jar target/llm-gateway.jar -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+        <!-- Fixed jar name so the Dockerfile does not depend on the version number. -->
+        <finalName>llm-gateway</finalName>
+    </build>
+</project>
