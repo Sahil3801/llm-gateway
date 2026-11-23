@@ -22,4 +22,19 @@ management:
       exposure:
         include: health,info
 
-# Gateway-specific settings (providers, fallback, cache, rate limit) are added step by step.
+# ---------------------------------------------------------------------------------------------
+# Gateway settings (bound to GatewayProperties). More sections are added in later steps.
+# Secrets are ONLY referenced as ${ENV_VAR:}, never written here. The ":" with nothing after it
+# means "empty if not set", so the app still starts and treats the provider as unconfigured.
+# ---------------------------------------------------------------------------------------------
+gateway:
+  # Used when the client doesn't send max_tokens.
+  default-max-tokens: 1024
+  providers:
+    groq:
+      api-key: ${GROQ_API_KEY:}
+      base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
+      # Free models change often: check console.groq.com and override with GROQ_MODEL.
+      model: ${GROQ_MODEL:openai/gpt-oss-20b}
+      connect-timeout: 5s
+      read-timeout: 30s
