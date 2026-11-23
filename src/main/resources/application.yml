@@ -56,6 +56,16 @@ gateway:
     enabled: ${CACHE_ENABLED:true}
     # How long an answer stays cached. Examples: 30m, 1h, 1d.
     ttl: ${CACHE_TTL:1h}
+  rate-limit:
+    # Per client (X-Client-Id header, or IP address if missing), sliding window in Redis.
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    # At most this many requests...
+    requests: ${RATE_LIMIT_REQUESTS:20}
+    # ...in any rolling window of this length. Examples: 30s, 1m, 1h.
+    window: ${RATE_LIMIT_WINDOW:1m}
+    # Redis unreachable: true = let requests through (availability first),
+    # false = reject them (cost protection first).
+    fail-open: ${RATE_LIMIT_FAIL_OPEN:true}
   # Used when the client doesn't send max_tokens.
   default-max-tokens: 1024
   providers:

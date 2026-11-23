@@ -50,7 +50,7 @@ public class ResponseCache {
         this.objectMapper = objectMapper;
         this.enabled = properties.cache().enabled();
         this.ttl = properties.cache().ttl();
-        log.info("Response cache: {}", enabled ? "enabled, TTL " + ttl : "disabled");
+        log.info("Response cache: {}", enabled ? "enabled, TTL " + ttl.toSeconds() + "s" : "disabled");
     }
 
     /** Returns the cached answer for this exact prompt, or empty on a miss / disabled / Redis error. */

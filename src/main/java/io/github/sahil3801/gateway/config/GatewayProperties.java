@@ -20,6 +20,7 @@ import org.springframework.validation.annotation.Validated;
  * @param defaultProvider the primary provider, tried first, e.g. "groq"
  * @param fallback which providers to try next when the primary fails, and the time budget
  * @param cache response cache settings
+ * @param rateLimit per-client rate limit settings
  * @param providers provider name (e.g. "groq") to its connection settings
  * @param defaultMaxTokens answer length limit used when the client doesn't send one
  */
@@ -29,6 +30,7 @@ public record GatewayProperties(
         @NotBlank String defaultProvider,
         @Valid Fallback fallback,
         @Valid Cache cache,
+        @Valid RateLimit rateLimit,
         @NotEmpty Map<String, @Valid ProviderSettings> providers,
         @Min(1) @Max(8192) int defaultMaxTokens) {
 
@@ -36,6 +38,31 @@ public record GatewayProperties(
     public GatewayProperties {
         fallback = fallback != null ? fallback : new Fallback(null, null);
         cache = cache != null ? cache : new Cache(null, null);
+        rateLimit = rateLimit != null ? rateLimit : new RateLimit(null, null, null, null);
+    }
+
+    /**
+     * Per-client rate limit: at most {@code requests} in any rolling {@code window}.
+     *
+     * @param enabled on/off without a code change (default: on)
+     * @param requests max requests per client per window (default: 20)
+     * @param window length of the sliding window (default: 1 minute)
+     * @param failOpen if Redis is unreachable: true = allow requests (default), false = reject them
+     */
+    public record RateLimit(Boolean enabled, Integer requests, Duration window, Boolean failOpen) {
+
+        public RateLimit {
+            enabled = enabled != null ? enabled : Boolean.TRUE;
+            requests = requests != null ? requests : 20;
+            window = window != null ? window : Duration.ofMinutes(1);
+            failOpen = failOpen != null ? failOpen : Boolean.TRUE;
+            if (requests < 1) {
+                throw new IllegalArgumentException("gateway.rate-limit.requests must be >= 1, got " + requests);
+            }
+            if (window.toMillis() < 1) {
+                throw new IllegalArgumentException("gateway.rate-limit.window must be positive, got " + window);
+            }
+        }
     }
 
     /**

@@ -1,14 +1,18 @@
 package io.github.sahil3801.gateway.common;
 
 import io.github.sahil3801.gateway.provider.ProviderException;
+import io.github.sahil3801.gateway.ratelimit.RateLimitExceededException;
+import io.github.sahil3801.gateway.ratelimit.RateLimiterUnavailableException;
 import io.github.sahil3801.gateway.service.AllProvidersFailedException;
 import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -46,6 +50,34 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ProblemDetail handleUnreadable(HttpMessageNotReadableException e) {
         return problem(HttpStatus.BAD_REQUEST, "Request body is missing or is not valid JSON.", "VALIDATION_ERROR");
+    }
+
+    /** 400: the X-Client-Id header is malformed. */
+    @ExceptionHandler(InvalidClientIdException.class)
+    public ProblemDetail handleInvalidClientId(InvalidClientIdException e) {
+        return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "VALIDATION_ERROR");
+    }
+
+    /**
+     * 429: the client used up its requests for the current window. {@code Retry-After} (seconds)
+     * tells it exactly when to try again, so well-behaved clients don't need to guess.
+     */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ProblemDetail> handleRateLimited(RateLimitExceededException e) {
+        long retryAfter = e.retryAfterSeconds();
+        ProblemDetail pd = problem(HttpStatus.TOO_MANY_REQUESTS,
+                "Rate limit of " + e.decision().limit() + " requests exceeded. Retry in " + retryAfter + "s.",
+                "RATE_LIMITED");
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfter))
+                .body(pd);
+    }
+
+    /** 503: Redis is down and the limiter is fail-closed, so we can't safely accept the request. */
+    @ExceptionHandler(RateLimiterUnavailableException.class)
+    public ProblemDetail handleLimiterUnavailable(RateLimiterUnavailableException e) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE,
+                "Rate limiting is temporarily unavailable. Please retry shortly.", "RATE_LIMITER_UNAVAILABLE");
     }
 
     /**
