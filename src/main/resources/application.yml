@@ -28,8 +28,14 @@ management:
 # means "empty if not set", so the app still starts and treats the provider as unconfigured.
 # ---------------------------------------------------------------------------------------------
 gateway:
-  # Which provider answers requests: groq | gemini | cohere. Switch with LLM_PROVIDER, no code change.
+  # Primary provider, tried first: groq | gemini | cohere. Switch with LLM_PROVIDER, no code change.
   default-provider: ${LLM_PROVIDER:groq}
+  fallback:
+    # Tried in this order when the primary fails (rate limit, timeout, 5xx...). Comma-separated.
+    # Providers without an API key are skipped automatically. Set it empty to disable fallback.
+    providers: ${LLM_FALLBACK_PROVIDERS:gemini,cohere}
+    # Overall time budget per request across all providers. Once spent, no new provider is tried.
+    total-timeout: 60s
   # Used when the client doesn't send max_tokens.
   default-max-tokens: 1024
   providers:

@@ -1,7 +1,9 @@
 package io.github.sahil3801.gateway.common;
 
 import io.github.sahil3801.gateway.provider.ProviderException;
+import io.github.sahil3801.gateway.service.AllProvidersFailedException;
 import java.net.URI;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +21,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  *
  * <pre>
  * {"type": "about:blank", "title": "Bad Gateway", "status": 502,
- *  "detail": "The LLM provider failed to answer.", "errorCode": "PROVIDER_ERROR"}
+ *  "detail": "All LLM providers failed to answer. Please retry later.",
+ *  "errorCode": "ALL_PROVIDERS_FAILED",
+ *  "attempts": [{"provider": "groq", "outcome": "RATE_LIMITED"}, ...]}
  * </pre>
  *
  * <p>{@code errorCode} is a stable machine-readable value clients can switch on.
@@ -45,23 +49,47 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Provider failure. Step 1 has a single provider, so its failure is the request's failure.
-     * Step 3 (fallback) replaces this with an "all providers failed" error.
+     * Every provider in the chain failed or was skipped.
+     *
+     * <ul>
+     *   <li>503 NO_PROVIDER_CONFIGURED: no API key set for any provider (a setup problem).
+     *   <li>502 ALL_PROVIDERS_FAILED: providers were called and all failed (an upstream outage).
+     * </ul>
+     *
+     * <p>The response lists each provider and why it failed, e.g. {@code [{"provider":"groq",
+     * "outcome":"RATE_LIMITED"}, ...]}. This is safe to expose (no keys, no provider error bodies)
+     * and saves the client a support ticket.
+     */
+    @ExceptionHandler(AllProvidersFailedException.class)
+    public ProblemDetail handleAllFailed(AllProvidersFailedException e) {
+        log.warn(e.getMessage());
+        ProblemDetail pd = e.noneConfigured()
+                ? problem(HttpStatus.SERVICE_UNAVAILABLE,
+                        "No LLM provider has an API key configured.", "NO_PROVIDER_CONFIGURED")
+                : problem(HttpStatus.BAD_GATEWAY,
+                        "All LLM providers failed to answer. Please retry later.", "ALL_PROVIDERS_FAILED");
+        List<AttemptView> attempts = e.attempts().stream()
+                .map(a -> new AttemptView(a.provider(), a.outcome()))
+                .toList();
+        pd.setProperty("attempts", attempts);
+        return pd;
+    }
+
+    /**
+     * A provider rejected the request itself (e.g. safety filter, prompt too long). The fallback
+     * chain stops on this, so it reaches the client as a 400.
      */
     @ExceptionHandler(ProviderException.class)
     public ProblemDetail handleProvider(ProviderException e) {
         // Full detail goes to the server log only; the client gets a generic, safe message.
         log.warn("Provider call failed: {}", e.getMessage());
-        return switch (e.reason()) {
-            case NOT_CONFIGURED -> problem(HttpStatus.SERVICE_UNAVAILABLE,
-                    "The selected LLM provider (" + e.provider() + ") has no API key configured.",
-                    "PROVIDER_NOT_CONFIGURED");
-            case BAD_REQUEST -> problem(HttpStatus.BAD_REQUEST,
-                    "The LLM provider rejected the request (e.g. prompt too long for the model).",
+        if (e.reason() == ProviderException.Reason.BAD_REQUEST) {
+            return problem(HttpStatus.BAD_REQUEST,
+                    "The LLM provider rejected the request (e.g. blocked by a safety filter or too long).",
                     "PROVIDER_REJECTED_REQUEST");
-            default -> problem(HttpStatus.BAD_GATEWAY,
-                    "The LLM provider failed to answer (" + e.reason() + ").", "PROVIDER_ERROR");
-        };
+        }
+        // Other reasons are handled by the fallback chain and shouldn't reach here; safe default.
+        return problem(HttpStatus.BAD_GATEWAY, "The LLM provider failed to answer.", "PROVIDER_ERROR");
     }
 
     /**
@@ -78,6 +106,9 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error", e);
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Something went wrong.", "INTERNAL_ERROR");
     }
+
+    /** Public view of one attempt: no latency or internal details, fields in a fixed order. */
+    private record AttemptView(String provider, String outcome) {}
 
     private static ProblemDetail problem(HttpStatus status, String detail, String errorCode) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(status, detail);
