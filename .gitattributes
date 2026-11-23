@@ -1,0 +1,5 @@
+# Keep Unix line endings for the Maven wrapper script, even when committed from Windows,
+# otherwise ./mvnw fails on Linux (CI, Docker) with "bad interpreter".
+* text=auto
+mvnw text eol=lf
+*.cmd text eol=crlf
