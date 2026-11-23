@@ -3,6 +3,7 @@ package io.github.sahil3801.gateway.config;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -14,12 +15,14 @@ import org.springframework.validation.annotation.Validated;
  * <p>Using a typed, validated record (instead of scattered {@code @Value} strings) means a typo or
  * a missing required value fails at startup, not in the middle of a user's request.
  *
+ * @param defaultProvider name of the provider that answers requests, e.g. "groq"
  * @param providers provider name (e.g. "groq") to its connection settings
  * @param defaultMaxTokens answer length limit used when the client doesn't send one
  */
 @Validated
 @ConfigurationProperties(prefix = "gateway")
 public record GatewayProperties(
+        @NotBlank String defaultProvider,
         @NotEmpty Map<String, @Valid ProviderSettings> providers,
         @Min(1) @Max(8192) int defaultMaxTokens) {
 

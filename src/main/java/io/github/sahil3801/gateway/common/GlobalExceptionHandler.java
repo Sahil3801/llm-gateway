@@ -54,7 +54,8 @@ public class GlobalExceptionHandler {
         log.warn("Provider call failed: {}", e.getMessage());
         return switch (e.reason()) {
             case NOT_CONFIGURED -> problem(HttpStatus.SERVICE_UNAVAILABLE,
-                    "No LLM provider is configured.", "PROVIDER_NOT_CONFIGURED");
+                    "The selected LLM provider (" + e.provider() + ") has no API key configured.",
+                    "PROVIDER_NOT_CONFIGURED");
             case BAD_REQUEST -> problem(HttpStatus.BAD_REQUEST,
                     "The LLM provider rejected the request (e.g. prompt too long for the model).",
                     "PROVIDER_REJECTED_REQUEST");

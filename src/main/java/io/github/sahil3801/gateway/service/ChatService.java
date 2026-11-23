@@ -6,6 +6,7 @@ import io.github.sahil3801.gateway.config.GatewayProperties;
 import io.github.sahil3801.gateway.provider.LlmProvider;
 import io.github.sahil3801.gateway.provider.LlmRequest;
 import io.github.sahil3801.gateway.provider.LlmResponse;
+import io.github.sahil3801.gateway.provider.ProviderRegistry;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,20 +16,20 @@ import org.springframework.stereotype.Service;
  * Orchestrates one chat request: build the neutral request, call a provider, time it, shape the
  * response.
  *
- * <p>Step 1: there is exactly one provider (Groq), injected directly. Step 2 replaces this with
- * config-driven provider selection, and step 3 with a fallback chain. Caching (step 4) and rate
- * limiting (step 5) also plug in around this class.
+ * <p>Step 2: the provider is chosen by config ({@code gateway.default-provider}) through the {@link
+ * ProviderRegistry}. This class doesn't know or care which provider it is. Step 3 replaces the
+ * single call with a fallback chain; caching (step 4) and rate limiting (step 5) plug in around it.
  */
 @Service
 public class ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 
-    private final LlmProvider provider;
+    private final ProviderRegistry registry;
     private final GatewayProperties properties;
 
-    public ChatService(LlmProvider provider, GatewayProperties properties) {
-        this.provider = provider;
+    public ChatService(ProviderRegistry registry, GatewayProperties properties) {
+        this.registry = registry;
         this.properties = properties;
     }
 
@@ -36,6 +37,8 @@ public class ChatService {
         String id = UUID.randomUUID().toString();
         int maxTokens = request.maxTokens() != null ? request.maxTokens() : properties.defaultMaxTokens();
         LlmRequest llmRequest = new LlmRequest(request.prompt(), maxTokens, request.temperature());
+
+        LlmProvider provider = registry.defaultProvider();
 
         long start = System.nanoTime();
         LlmResponse answer = provider.chat(llmRequest); // throws ProviderException on failure

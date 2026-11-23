@@ -28,6 +28,8 @@ management:
 # means "empty if not set", so the app still starts and treats the provider as unconfigured.
 # ---------------------------------------------------------------------------------------------
 gateway:
+  # Which provider answers requests: groq | gemini | cohere. Switch with LLM_PROVIDER, no code change.
+  default-provider: ${LLM_PROVIDER:groq}
   # Used when the client doesn't send max_tokens.
   default-max-tokens: 1024
   providers:
@@ -36,5 +38,19 @@ gateway:
       base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
       # Free models change often: check console.groq.com and override with GROQ_MODEL.
       model: ${GROQ_MODEL:openai/gpt-oss-20b}
+      connect-timeout: 5s
+      read-timeout: 30s
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+      # Check aistudio.google.com for current model names; override with GEMINI_MODEL.
+      model: ${GEMINI_MODEL:gemini-2.5-flash}
+      connect-timeout: 5s
+      read-timeout: 30s
+    cohere:
+      api-key: ${COHERE_API_KEY:}
+      base-url: ${COHERE_BASE_URL:https://api.cohere.com/v2}
+      # Check dashboard.cohere.com for current model names; override with COHERE_MODEL.
+      model: ${COHERE_MODEL:command-a-03-2025}
       connect-timeout: 5s
       read-timeout: 30s
