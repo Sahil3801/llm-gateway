@@ -46,7 +46,12 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Redis support is added in step 4 (caching), when it is first needed. -->
+        <!-- Redis client (Lettuce) + StringRedisTemplate: response cache (step 4) and, later,
+             rate-limit counters (step 5). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

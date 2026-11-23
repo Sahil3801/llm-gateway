@@ -1,0 +1,30 @@
+# Local stack: Redis + the gateway.
+#
+#   docker compose up -d redis      # only Redis (run the app with ./mvnw spring-boot:run)
+#   docker compose up -d --build    # Redis + the gateway in a container
+#
+# API keys come from .env (copy .env.example). They are passed at runtime, never baked into the image.
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Inside Docker, Redis is reached by its service name, not localhost.
+      REDIS_HOST: redis
+    depends_on:
+      redis:
+        condition: service_healthy

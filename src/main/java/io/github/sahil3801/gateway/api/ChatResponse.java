@@ -7,7 +7,8 @@ import io.github.sahil3801.gateway.provider.TokenUsage;
 /**
  * The normalised response of {@code POST /v1/chat}. The shape is identical whichever provider
  * answered; only the values of {@code provider} and {@code model} tell you who it was, and
- * {@code fallbacks} tells you how many providers failed before it.
+ * {@code fallbacks} tells you how many providers failed before it. {@code cached: true} means the
+ * answer came from the cache and no provider was called for this request.
  *
  * <pre>
  * {
@@ -28,6 +29,7 @@ public record ChatResponse(
         String content,
         @JsonProperty("finish_reason") String finishReason,
         Usage usage,
+        boolean cached,
         int fallbacks,
         @JsonProperty("latency_ms") long latencyMs) {
 
@@ -43,8 +45,8 @@ public record ChatResponse(
     }
 
     /** Maps the internal provider-neutral answer to the public JSON shape. */
-    public static ChatResponse from(String id, LlmResponse r, int fallbacks, long latencyMs) {
+    public static ChatResponse from(String id, LlmResponse r, boolean cached, int fallbacks, long latencyMs) {
         return new ChatResponse(id, r.provider(), r.model(), r.content(), r.finishReason(),
-                Usage.from(r.usage()), fallbacks, latencyMs);
+                Usage.from(r.usage()), cached, fallbacks, latencyMs);
     }
 }

@@ -19,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
  *
  * @param defaultProvider the primary provider, tried first, e.g. "groq"
  * @param fallback which providers to try next when the primary fails, and the time budget
+ * @param cache response cache settings
  * @param providers provider name (e.g. "groq") to its connection settings
  * @param defaultMaxTokens answer length limit used when the client doesn't send one
  */
@@ -27,12 +28,33 @@ import org.springframework.validation.annotation.Validated;
 public record GatewayProperties(
         @NotBlank String defaultProvider,
         @Valid Fallback fallback,
+        @Valid Cache cache,
         @NotEmpty Map<String, @Valid ProviderSettings> providers,
         @Min(1) @Max(8192) int defaultMaxTokens) {
 
     /** No "fallback:" block in the yml means: no fallback, primary provider only. */
     public GatewayProperties {
         fallback = fallback != null ? fallback : new Fallback(null, null);
+        cache = cache != null ? cache : new Cache(null, null);
+    }
+
+    /**
+     * Response cache settings.
+     *
+     * @param enabled turn caching on/off without a code change (default: on)
+     * @param ttl how long an answer stays cached before Redis expires it (default: 1 hour)
+     */
+    public record Cache(Boolean enabled, Duration ttl) {
+
+        private static final Duration DEFAULT_TTL = Duration.ofHours(1);
+
+        public Cache {
+            enabled = enabled != null ? enabled : Boolean.TRUE;
+            ttl = ttl != null ? ttl : DEFAULT_TTL;
+            if (ttl.isZero() || ttl.isNegative()) {
+                throw new IllegalArgumentException("gateway.cache.ttl must be positive, got " + ttl);
+            }
+        }
     }
 
     /**

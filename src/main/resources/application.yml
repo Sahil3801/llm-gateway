@@ -6,6 +6,16 @@ spring:
     # virtual thread, so slow LLM calls don't exhaust Tomcat's thread pool.
     virtual:
       enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # Optional; empty for a local Redis without auth.
+      password: ${REDIS_PASSWORD:}
+      # Short timeouts on purpose: the cache must never make a request slow. If Redis doesn't
+      # answer within 500 ms we treat it as a cache miss (the default would wait 60 seconds).
+      timeout: 500ms
+      connect-timeout: 500ms
 
 server:
   port: ${PORT:8080}
@@ -21,6 +31,11 @@ management:
     web:
       exposure:
         include: health,info
+  health:
+    redis:
+      # The cache is optional (Redis down = cache miss), so Redis being down must not mark the
+      # whole gateway DOWN and get the container restarted by its health check.
+      enabled: false
 
 # ---------------------------------------------------------------------------------------------
 # Gateway settings (bound to GatewayProperties). More sections are added in later steps.
@@ -36,6 +51,11 @@ gateway:
     providers: ${LLM_FALLBACK_PROVIDERS:gemini,cohere}
     # Overall time budget per request across all providers. Once spent, no new provider is tried.
     total-timeout: 60s
+  cache:
+    # Same prompt text -> answer served from Redis, no provider call.
+    enabled: ${CACHE_ENABLED:true}
+    # How long an answer stays cached. Examples: 30m, 1h, 1d.
+    ttl: ${CACHE_TTL:1h}
   # Used when the client doesn't send max_tokens.
   default-max-tokens: 1024
   providers:
