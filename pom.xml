@@ -52,6 +52,31 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+
+        <!-- ===== Test-only dependencies (never packaged into the jar) ===== -->
+
+        <!-- JUnit 5, AssertJ, Mockito, Spring test support (MockMvc, @SpringBootTest). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Fake HTTP server standing in for Groq/Gemini/Cohere: no real API calls, no keys, and we
+             can make a "provider" return 429, 404, 500 or hang on demand. -->
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>3.13.2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Starts a real Redis in Docker for the tests (version managed by Spring Boot). -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
