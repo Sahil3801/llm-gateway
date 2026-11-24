@@ -53,6 +53,9 @@ public final class ProviderHttp {
             Reason reason = switch (status) {
                 case 429 -> Reason.RATE_LIMITED;
                 case 401, 403 -> Reason.AUTH_FAILED;
+                // The model name is part of every request (and of Gemini's URL), so a 404 means our
+                // model/endpoint config is wrong, not that the prompt is. Must not stop the fallback.
+                case 404 -> Reason.MODEL_NOT_FOUND;
                 default -> status >= 500 ? Reason.SERVER_ERROR : Reason.BAD_REQUEST;
             };
             return new ProviderException(provider, reason, status, "HTTP " + status, e);

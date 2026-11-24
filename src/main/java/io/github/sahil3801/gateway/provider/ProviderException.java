@@ -21,6 +21,11 @@ public class ProviderException extends RuntimeException {
         SERVER_ERROR,
         /** Provider returned 401/403: our key is wrong or revoked (a gateway config problem). */
         AUTH_FAILED,
+        /**
+         * Provider returned 404: the configured model name (or base URL) doesn't exist, e.g. a typo
+         * or a model the provider has retired. A gateway config problem, not a problem with the prompt.
+         */
+        MODEL_NOT_FOUND,
         /** Provider rejected the request itself (other 4xx), e.g. prompt too long for the model. */
         BAD_REQUEST,
         /** Provider answered 2xx but the body was empty or not in the expected format. */

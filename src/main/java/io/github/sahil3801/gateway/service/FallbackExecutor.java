@@ -22,8 +22,9 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li>RATE_LIMITED, TIMEOUT, SERVER_ERROR, INVALID_RESPONSE: provider-side problems, so the next
  *       provider will probably succeed. Move on.
- *   <li>AUTH_FAILED: our key for THIS provider is wrong. Another provider has its own key. Move on,
- *       but log it as an error because a human needs to fix the config.
+ *   <li>AUTH_FAILED, MODEL_NOT_FOUND: OUR config for THIS provider is wrong (bad key, mistyped or
+ *       retired model name). Another provider has its own key and model. Move on, but log it as an
+ *       error because a human needs to fix the config.
  *   <li>BAD_REQUEST: the provider rejected the request itself (e.g. safety filter, prompt too long).
  *       Stop. Retrying elsewhere would mostly fail the same way, burn quota on every provider, and
  *       "shop around" a prompt one provider deliberately refused.
@@ -94,6 +95,9 @@ public class FallbackExecutor {
                 if (e.reason() == Reason.AUTH_FAILED) {
                     log.error("Provider {} rejected our API key (HTTP {}); check its *_API_KEY. Trying next provider.",
                             provider.name(), e.httpStatus());
+                } else if (e.reason() == Reason.MODEL_NOT_FOUND) {
+                    log.error("Provider {} doesn't know the configured model or endpoint (HTTP {}); check its "
+                            + "*_MODEL / *_BASE_URL. Trying next provider.", provider.name(), e.httpStatus());
                 } else {
                     log.warn("Provider {} failed ({}) after {} ms; trying next provider",
                             provider.name(), e.reason(), latency);
